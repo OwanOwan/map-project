@@ -57,6 +57,11 @@ export async function runMigrations() {
         verified_by UUID REFERENCES users(id) ON DELETE SET NULL,
         verified_at TIMESTAMPTZ,
         verification_notes TEXT,
+        -- Free-text landmark or junction name (offline-first location hint)
+        landmark VARCHAR(200),
+        -- Client-generated idempotency key (UUID v4) from the offline queue.
+        -- UNIQUE enforces exactly-once storage even on retried submissions.
+        client_id UUID UNIQUE,
         location GEOGRAPHY(Point, 4326) NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -95,6 +100,8 @@ export async function runMigrations() {
       CREATE INDEX IF NOT EXISTS idx_incidents_type ON incidents (type);
       CREATE INDEX IF NOT EXISTS idx_incidents_created_at ON incidents (created_at);
       CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents (status);
+      -- Partial index for fast idempotency lookups (only rows that have a client_id)
+      CREATE INDEX IF NOT EXISTS idx_incidents_client_id ON incidents (client_id) WHERE client_id IS NOT NULL;
     `);
 
     await client.query('COMMIT');

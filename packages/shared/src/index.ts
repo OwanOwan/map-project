@@ -73,6 +73,11 @@ export interface IncidentProperties {
   type: IncidentType;
   severity: number;
   description: string;
+  /**
+   * Optional free-text landmark or junction name that helps locate the incident
+   * when GPS accuracy is limited (e.g. "near the Shell station at Broad St junction").
+   */
+  landmark?: string;
   status: IncidentStatus;
   verified: boolean;
   source: IncidentSource;
@@ -80,6 +85,12 @@ export interface IncidentProperties {
   verifiedBy?: string;
   verifiedAt?: string;
   verificationNotes?: string;
+  /**
+   * Client-generated idempotency key (UUID v4) echoed back by the API.
+   * Allows the offline queue to match submitted reports to server responses
+   * and prevents duplicate submissions on reconnect.
+   */
+  clientId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -137,6 +148,24 @@ export const CreateIncidentSchema = z.preprocess(
       .min(-180, 'Longitude must be between -180 and 180')
       .max(180, 'Longitude must be between -180 and 180'),
     source: IncidentSourceSchema.optional().default('user'),
+    /**
+     * Optional free-text landmark or junction name (e.g. "Broad St & 5th Ave").
+     * Helps rescuers locate the incident when GPS alone is insufficient.
+     */
+    landmark: z
+      .string()
+      .trim()
+      .max(200, 'Landmark must not exceed 200 characters')
+      .optional(),
+    /**
+     * Client-generated idempotency key (UUID v4).
+     * The API uses this to deduplicate retried submissions from the offline queue.
+     * Must be a valid UUID; if omitted the server treats the request as non-idempotent.
+     */
+    clientId: z
+      .string()
+      .uuid('clientId must be a valid UUID v4')
+      .optional(),
   }),
 );
 export type CreateIncidentInput = z.infer<typeof CreateIncidentSchema>;

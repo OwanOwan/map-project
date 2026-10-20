@@ -61,7 +61,31 @@ export class InMemoryUserRepository implements IUserRepository {
 export class InMemoryIncidentRepository implements IIncidentRepository {
   private incidents: Map<string, IncidentFeature> = new Map();
 
-  async create(data: CreateIncidentInput & { reportedBy?: string }): Promise<IncidentFeature> {
+  /**
+   * Idempotency store: maps client-supplied clientId (UUID v4) → server-assigned
+   * incident UUID. On a retry the same clientId returns the already-created
+   * feature instead of creating a duplicate – identical to what a Redis-backed
+   * production store would do.
+   */
+  private idempotencyIndex: Map<string, string> = new Map();
+
+  async create(
+    data: CreateIncidentInput & { reportedBy?: string },
+  ): Promise<IncidentFeature> {
+    // ── Idempotency check ────────────────────────────────────────────────────
+    // If the client supplied a clientId and we have already processed it,
+    // return the original feature unchanged.  This prevents duplicates when
+    // the offline queue retries after reconnect.
+    if (data.clientId) {
+      const existingId = this.idempotencyIndex.get(data.clientId);
+      if (existingId) {
+        const existing = this.incidents.get(existingId);
+        if (existing) {
+          return JSON.parse(JSON.stringify(existing));
+        }
+      }
+    }
+
     const id = randomUUID();
     const now = new Date().toISOString();
 
@@ -78,6 +102,10 @@ export class InMemoryIncidentRepository implements IIncidentRepository {
         type: data.type,
         severity: data.severity,
         description: data.description,
+        // ── New fields ──────────────────────────────────────────────────────
+        landmark: data.landmark,
+        clientId: data.clientId,
+        // ────────────────────────────────────────────────────────────────────
         status: 'reported',
         verified: false,
         source: data.source || 'user',
@@ -88,6 +116,12 @@ export class InMemoryIncidentRepository implements IIncidentRepository {
     };
 
     this.incidents.set(id, feature);
+
+    // Register the clientId in the idempotency index
+    if (data.clientId) {
+      this.idempotencyIndex.set(data.clientId, id);
+    }
+
     return JSON.parse(JSON.stringify(feature));
   }
 
@@ -170,5 +204,6 @@ export class InMemoryIncidentRepository implements IIncidentRepository {
 
   async clear(): Promise<void> {
     this.incidents.clear();
+    this.idempotencyIndex.clear();
   }
 }

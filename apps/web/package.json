@@ -1,0 +1,20 @@
+{
+  "name": "@safetymap/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "echo 'Serve with any static server, e.g. npx serve dist'",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@safetymap/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

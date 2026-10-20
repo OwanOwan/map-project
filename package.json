@@ -1,0 +1,32 @@
+{
+  "name": "safetymap-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-time safety map monorepo with PostGIS, Fastify API, and Next.js frontend",
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/* --filter=./apps/* build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm --filter=@safetymap/api test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter=@safetymap/api db:migrate",
+    "db:seed": "pnpm --filter=@safetymap/api db:seed",
+    "db:query-nearby": "pnpm --filter=@safetymap/api db:query-nearby",
+    "dev:api": "pnpm --filter=@safetymap/api dev",
+    "dev:web": "pnpm --filter=@safetymap/web dev"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "eslint": "^9.20.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
